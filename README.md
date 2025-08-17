@@ -1,16 +1,117 @@
-# suri_app
+# 수리모아 (Suri Moa) - Flutter 앱
 
-A new Flutter project.
+## 프로젝트 개요
+수리모아는 편리한 설비 서비스를 제공하는 플랫폼 앱입니다. 사용자는 고객 또는 수리기사로 시작할 수 있으며, 각각의 역할에 맞는 서비스를 이용할 수 있습니다.
 
-## Getting Started
+## 주요 기능
+- **온보딩 화면**: 사용자 타입 선택 (고객/수리기사)
+- **반응형 UI**: 다양한 화면 크기에 대응하는 반응형 디자인
+- **객체지향 설계**: 유지보수가 용이한 모듈화된 코드 구조
+- **커스텀 폰트**: Gasoek One, Pretendard 폰트 지원
 
-This project is a starting point for a Flutter application.
+## 프로젝트 구조
 
-A few resources to get you started if this is your first Flutter project:
+```
+lib/
+├── constants/           # 앱 상수 정의
+│   ├── app_colors.dart      # 색상 상수
+│   ├── app_sizes.dart       # 크기 상수
+│   └── app_text_styles.dart # 텍스트 스타일
+├── models/              # 데이터 모델
+│   └── user_type.dart       # 사용자 타입 정의
+├── screens/             # 화면 위젯
+│   └── onboarding_screen.dart # 온보딩 화면
+├── widgets/             # 재사용 가능한 위젯
+│   ├── common/              # 공통 위젯
+│   │   ├── avatar_placeholder.dart  # 아바타 플레이스홀더
+│   │   └── chevron_forward_icon.dart # 화살표 아이콘
+│   └── onboarding/          # 온보딩 관련 위젯
+│       ├── logo_header.dart      # 로고 및 헤더
+│       └── user_type_card.dart   # 사용자 타입 선택 카드
+└── main.dart            # 앱 진입점
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 아키텍처 특징
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 1. 상수 관리
+- **AppColors**: 앱 전체에서 사용하는 색상을 중앙 집중 관리
+- **AppSizes**: 일관된 크기와 간격을 위한 상수 정의
+- **AppTextStyles**: 텍스트 스타일의 일관성 유지
+
+### 2. 모델 설계
+- **UserType**: 사용자 타입을 열거형으로 정의하여 타입 안전성 확보
+- 각 사용자 타입별로 제목과 설명을 포함
+
+### 3. 위젯 분리
+- **LogoHeader**: 로고와 헤더 텍스트를 담당하는 재사용 가능한 위젯
+- **UserTypeCard**: 사용자 타입 선택을 위한 카드 위젯
+- **AvatarPlaceholder**: 아바타 이미지가 없을 때 사용하는 플레이스홀더
+
+### 4. 화면 관리
+- **OnboardingScreen**: 온보딩 화면의 상태 관리 및 사용자 상호작용 처리
+
+## 설치 및 실행
+
+### 필수 요구사항
+- Flutter SDK 3.9.0 이상
+- Dart SDK 3.9.0 이상
+
+### 폰트 설치
+앱을 실행하기 전에 `fonts/` 디렉토리에 필요한 폰트 파일들을 설치해야 합니다:
+- Gasoek One (로고용)
+- Pretendard (텍스트용)
+
+자세한 설치 방법은 `fonts/README.md`를 참조하세요.
+
+### 설치 방법
+```bash
+# 의존성 설치
+flutter pub get
+
+# 앱 실행
+flutter run
+```
+
+## 개발 가이드라인
+
+### 1. 코드 스타일
+- Dart 공식 스타일 가이드 준수
+- 의미있는 변수명과 함수명 사용
+- 적절한 주석 작성
+
+### 2. 위젯 설계
+- 단일 책임 원칙 준수
+- 재사용 가능한 컴포넌트 설계
+- Props를 통한 데이터 전달
+
+### 3. 상태 관리
+- StatefulWidget을 사용한 로컬 상태 관리
+- setState를 통한 UI 업데이트
+
+## 향후 개발 계획
+
+### 단기 목표
+- [ ] 사용자 인증 시스템 구현
+- [ ] 고객용 메인 화면 개발
+- [ ] 수리기사용 메인 화면 개발
+
+### 장기 목표
+- [ ] 실시간 채팅 기능
+- [ ] 결제 시스템 연동
+- [ ] 푸시 알림 기능
+- [ ] 다국어 지원
+
+## 기여 방법
+
+1. 이슈 생성 또는 기존 이슈 확인
+2. 기능 브랜치 생성 (`feature/기능명`)
+3. 코드 작성 및 테스트
+4. Pull Request 생성
+
+## 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다.
+
+## 연락처
+
+프로젝트 관련 문의사항이 있으시면 이슈를 통해 연락해 주세요.
