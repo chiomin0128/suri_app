@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
-import '../../constants/app_sizes.dart';
 import '../../constants/app_text_styles.dart';
 
 /// 하단 네비게이션 바 위젯

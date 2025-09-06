@@ -85,23 +85,33 @@ class QuoteNotification extends StatelessWidget {
   /// 견적서 카드 위젯
   Widget _buildQuoteCard() {
     return Container(
-      padding: const EdgeInsets.all(AppSizes.md),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2451BA), Color(0xFF4A6CF7)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+          ),
+        ],
       ),
       child: Row(
         children: [
           // 프로필 아이콘
           Container(
-            width: 48,
-            height: 48,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.person, color: AppColors.primary, size: 24),
+            child: const Icon(Icons.description, color: Colors.white, size: 28),
           ),
 
           const SizedBox(width: AppSizes.md),
@@ -115,16 +125,17 @@ class QuoteNotification extends StatelessWidget {
                   '홍길동 님 외 1명',
                   style: AppTextStyles.cardDescription.copyWith(
                     fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   '어제 요청한 천장 누수 견적서가 도착했습니다.',
                   style: AppTextStyles.cardDescription.copyWith(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: Colors.white70,
+                    height: 1.3,
                   ),
                 ),
               ],
@@ -132,12 +143,19 @@ class QuoteNotification extends StatelessWidget {
           ),
 
           // 건수 표시
-          Text(
-            '2건',
-            style: AppTextStyles.cardDescription.copyWith(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '2건',
+              style: AppTextStyles.cardDescription.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
         ],

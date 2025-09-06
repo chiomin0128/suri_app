@@ -9,9 +9,36 @@ class RecommendedServices extends StatelessWidget {
 
   // 추천 서비스 데이터
   final List<ServiceData> _services = const [
-    ServiceData(title: '설명글', category: '분야', tag: '추천', isRecommended: true),
-    ServiceData(title: '설명글', category: '분야', tag: '인기', isRecommended: false),
-    ServiceData(title: '설명글', category: '분야', tag: '인기', isRecommended: false),
+    ServiceData(
+      title: '누수 전문 수리',
+      category: '누수',
+      tag: '추천',
+      isRecommended: true,
+      price: '5만원부터',
+      rating: 4.8,
+      technicianName: '김수리',
+      technicianIcon: Icons.person,
+    ),
+    ServiceData(
+      title: '에어컨 청소',
+      category: '에어컨',
+      tag: '인기',
+      isRecommended: false,
+      price: '3만원부터',
+      rating: 4.9,
+      technicianName: '박에어',
+      technicianIcon: Icons.person,
+    ),
+    ServiceData(
+      title: '보일러 점검',
+      category: '보일러',
+      tag: '인기',
+      isRecommended: false,
+      price: '2만원부터',
+      rating: 4.7,
+      technicianName: '이보일',
+      technicianIcon: Icons.person,
+    ),
   ];
 
   @override
@@ -51,44 +78,108 @@ class RecommendedServices extends StatelessWidget {
   /// 서비스 카드 위젯
   Widget _buildServiceCard(ServiceData service) {
     return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: AppSizes.sm),
+      width: 180,
+      margin: const EdgeInsets.only(right: AppSizes.md),
       decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
       ),
       child: Stack(
         children: [
           // 태그
           Positioned(
-            top: 8,
-            left: 8,
+            top: 12,
+            left: 12,
             child: _buildTag(service.tag, service.isRecommended),
           ),
 
           // 서비스 정보
-          Positioned(
-            bottom: 12,
-            left: 12,
-            right: 12,
+          Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 20),
                 Text(
                   service.category,
                   style: AppTextStyles.cardDescription.copyWith(
-                    fontSize: 14,
+                    fontSize: 12,
                     color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   service.title,
                   style: AppTextStyles.cardDescription.copyWith(
                     fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.star, size: 14, color: Colors.amber[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      service.rating.toString(),
+                      style: AppTextStyles.cardDescription.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // 수리기사 정보
+                Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Icon(
+                          service.technicianIcon,
+                          size: 14,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        service.technicianName,
+                        style: AppTextStyles.cardDescription.copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  service.price,
+                  style: AppTextStyles.cardDescription.copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
                   ),
                 ),
               ],
@@ -128,11 +219,19 @@ class ServiceData {
   final String category;
   final String tag;
   final bool isRecommended;
+  final String price;
+  final double rating;
+  final String technicianName;
+  final IconData technicianIcon;
 
   const ServiceData({
     required this.title,
     required this.category,
     required this.tag,
     required this.isRecommended,
+    required this.price,
+    required this.rating,
+    required this.technicianName,
+    required this.technicianIcon,
   });
 }

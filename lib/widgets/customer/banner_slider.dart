@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
 import '../../constants/app_sizes.dart';
 
 /// 배너 슬라이더 위젯
@@ -14,11 +13,38 @@ class _BannerSliderState extends State<BannerSlider> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  // 배너 데이터 (임시)
+  // 배너 데이터 (개선된 디자인)
   final List<BannerData> _banners = [
-    BannerData(color: const Color(0xFFD9D9D9), title: '첫 번째 배너'),
-    BannerData(color: const Color(0xFFC0C0C0), title: '두 번째 배너'),
-    BannerData(color: const Color(0xFFA0A0A0), title: '세 번째 배너'),
+    BannerData(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF2451BA), Color(0xFF4A6CF7)],
+      ),
+      title: '수리 서비스',
+      subtitle: '전문가와 함께하는\n안전한 수리',
+      icon: Icons.build_circle,
+    ),
+    BannerData(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF00C851), Color(0xFF00E676)],
+      ),
+      title: '빠른 견적',
+      subtitle: '24시간 내\n견적서 도착',
+      icon: Icons.speed,
+    ),
+    BannerData(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFF6B35), Color(0xFFFF8A65)],
+      ),
+      title: '전국 서비스',
+      subtitle: '어디든 찾아가는\n수리 서비스',
+      icon: Icons.location_on,
+    ),
   ];
 
   @override
@@ -65,17 +91,54 @@ class _BannerSliderState extends State<BannerSlider> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: banner.color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Text(
-          banner.title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.black54,
+        gradient: banner.gradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color:
+                (banner.gradient?.colors.first ?? banner.color ?? Colors.blue)
+                    .withValues(alpha: 0.3),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
           ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    banner.title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    banner.subtitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white70,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              banner.icon,
+              size: 48,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ],
         ),
       ),
     );
@@ -105,8 +168,17 @@ class _BannerSliderState extends State<BannerSlider> {
 
 /// 배너 데이터 모델
 class BannerData {
-  final Color color;
+  final LinearGradient? gradient;
+  final Color? color;
   final String title;
+  final String subtitle;
+  final IconData icon;
 
-  BannerData({required this.color, required this.title});
+  BannerData({
+    this.gradient,
+    this.color,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
 }
