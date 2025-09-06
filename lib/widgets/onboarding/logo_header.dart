@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
 import '../../constants/app_sizes.dart';
 import '../../constants/app_text_styles.dart';
 
@@ -14,10 +13,10 @@ class LogoHeader extends StatelessWidget {
 
   /// 로고 텍스트
   final String logoText;
-  
+
   /// 제목 텍스트
   final String title;
-  
+
   /// 부제목 텍스트
   final String subtitle;
 
@@ -26,15 +25,10 @@ class LogoHeader extends StatelessWidget {
     return Column(
       children: [
         // 로고
-        Text(
-          logoText,
-          style: AppTextStyles.logo,
-          textAlign: TextAlign.center,
-          
-        ),
-        
+        Text(logoText, style: AppTextStyles.logo, textAlign: TextAlign.center),
+
         const SizedBox(height: AppSizes.lg),
-        
+
         // 제목과 부제목
         Column(
           children: [
@@ -43,9 +37,9 @@ class LogoHeader extends StatelessWidget {
               style: AppTextStyles.title,
               textAlign: TextAlign.center,
             ),
-            
+
             const SizedBox(height: AppSizes.sm),
-            
+
             Text(
               subtitle,
               style: AppTextStyles.subtitle,

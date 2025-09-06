@@ -4,7 +4,6 @@ import '../../constants/app_sizes.dart';
 import '../../constants/app_text_styles.dart';
 import '../../models/user_type.dart';
 import '../common/avatar_placeholder.dart';
-import '../common/chevron_forward_icon.dart';
 
 /// 사용자 타입을 선택할 수 있는 카드 위젯
 class UserTypeCard extends StatelessWidget {
@@ -17,10 +16,10 @@ class UserTypeCard extends StatelessWidget {
 
   /// 사용자 타입
   final UserType userType;
-  
+
   /// 탭 콜백
   final VoidCallback onTap;
-  
+
   /// 선택된 상태 여부
   final bool isSelected;
 
@@ -46,21 +45,16 @@ class UserTypeCard extends StatelessWidget {
         child: Row(
           children: [
             // 아바타 이미지
-            AvatarPlaceholder(
-              size: AppSizes.avatarSize,
-            ),
+            AvatarPlaceholder(size: AppSizes.avatarSize, icon: userType.icon),
             const SizedBox(width: AppSizes.md),
-            
+
             // 텍스트 정보
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    userType.title,
-                    style: AppTextStyles.cardTitle,
-                  ),
+                  Text(userType.title, style: AppTextStyles.cardTitle),
                   const SizedBox(height: AppSizes.xs),
                   Text(
                     userType.description,
