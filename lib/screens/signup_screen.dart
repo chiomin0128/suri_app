@@ -5,6 +5,7 @@ import '../constants/app_text_styles.dart';
 import '../models/signup_data.dart';
 import '../models/user_type.dart';
 import '../widgets/signup/signup_form.dart';
+import '../services/api_service.dart';
 import 'customer_home_screen.dart';
 
 /// 회원가입 화면
@@ -28,12 +29,53 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      // TODO: 실제 회원가입 API 호출
-      await Future.delayed(const Duration(seconds: 2)); // 임시 딜레이
+      // 서버의 실제 전문분야 ID 확인
+      print('=== 서버 전문분야 ID 확인 ===');
+      final serverSpecialties = await ApiService.getSpecialties();
+      print('서버 전문분야 개수: ${serverSpecialties.length}');
+
+      // 서버의 전문분야 ID 목록 출력
+      final serverIds = serverSpecialties.map((s) => s['id'] as int).toList();
+      print('서버 전문분야 ID: $serverIds');
+      print('클라이언트 선택 ID: ${signupData.specialtyIds}');
+
+      // 유효한 ID만 필터링
+      final validSpecialtyIds = signupData.specialtyIds
+          .where((id) => serverIds.contains(id))
+          .toList();
+
+      print('유효한 전문분야 ID: $validSpecialtyIds');
+
+      if (signupData.userType == UserType.technician &&
+          validSpecialtyIds.isEmpty) {
+        throw Exception('선택한 전문분야가 서버에 존재하지 않습니다.');
+      }
+
+      // 실제 회원가입 API 호출
+      final response = await ApiService.registerMember(
+        email: signupData.email,
+        password: signupData.password,
+        username: signupData.username,
+        fullName: signupData.fullName,
+        phone: signupData.phone,
+        region: signupData.region,
+        grade: signupData.grade,
+        specialtyIds: validSpecialtyIds,
+      );
 
       if (mounted) {
-        // 성공 다이얼로그 표시
-        _showSuccessDialog();
+        if (response.success) {
+          // 성공 다이얼로그 표시
+          _showSuccessDialog(response);
+        } else {
+          // 실패 스낵바 표시
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -55,7 +97,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   /// 성공 다이얼로그 표시
-  void _showSuccessDialog() {
+  void _showSuccessDialog(SignupResponse response) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -63,37 +105,193 @@ class _SignupScreenState extends State<SignupScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
         ),
-        title: Text('회원가입 완료', style: AppTextStyles.cardTitle),
-        content: Text(
-          '${widget.userType == UserType.customer ? '고객' : '수리기사'} 회원가입이 완료되었습니다.',
-          style: AppTextStyles.cardDescription,
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 성공 아이콘
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle,
+                size: 32,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
+
+            // 제목
+            Text(
+              '회원가입 완료',
+              style: AppTextStyles.cardTitle.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.sm),
+
+            // 메시지
+            Text(
+              response.message,
+              style: AppTextStyles.cardDescription.copyWith(
+                fontSize: 16,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.lg),
+
+            // 회원 정보 표시
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        '사용자명: ${response.member.username}',
+                        style: AppTextStyles.cardDescription.copyWith(
+                          fontSize: 14,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.email, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '이메일: ${response.member.email}',
+                          style: AppTextStyles.cardDescription.copyWith(
+                            fontSize: 14,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.star, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        '등급: ${response.member.grade == 'consumer' ? '고객' : '수리기사'}',
+                        style: AppTextStyles.cardDescription.copyWith(
+                          fontSize: 14,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSizes.sm),
+
+            // 이메일 인증 안내
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.email_outlined,
+                    size: 16,
+                    color: Colors.orange[700],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '이메일 인증을 진행해주세요',
+                      style: AppTextStyles.cardDescription.copyWith(
+                        fontSize: 13,
+                        color: Colors.orange[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // 다이얼로그 닫기
-              Navigator.of(context).pop(); // 회원가입 화면 닫기
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // 다이얼로그 닫기
+                Navigator.of(context).pop(); // 회원가입 화면 닫기
 
-              // 사용자 타입에 따라 적절한 화면으로 이동
-              if (widget.userType == UserType.customer) {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => const CustomerHomeScreen(),
+                // 사용자 타입에 따라 적절한 화면으로 이동
+                if (widget.userType == UserType.customer) {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => const CustomerHomeScreen(),
+                    ),
+                  );
+                } else {
+                  // TODO: 수리기사 홈페이지로 이동
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('수리기사 홈페이지는 준비 중입니다'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.background,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    AppSizes.cardBorderRadius,
                   ),
-                );
-              } else {
-                // TODO: 수리기사 홈페이지로 이동
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('수리기사 홈페이지는 준비 중입니다'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-            child: Text(
-              '확인',
-              style: AppTextStyles.cardTitle.copyWith(color: AppColors.primary),
+                ),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: Text(
+                '확인',
+                style: AppTextStyles.cardTitle.copyWith(
+                  color: AppColors.background,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],

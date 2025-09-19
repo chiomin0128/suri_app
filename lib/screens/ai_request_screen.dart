@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 import '../../constants/app_colors.dart';
 import '../../constants/app_text_styles.dart';
+import '../services/permission_service.dart';
 
 class AIRequestScreen extends StatefulWidget {
   const AIRequestScreen({super.key});
@@ -14,8 +18,8 @@ class _AIRequestScreenState extends State<AIRequestScreen> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _urgencyController = TextEditingController();
 
-  List<String> _selectedImages = [];
-  String _selectedCategory = '';
+  List<File> _selectedImages = [];
+  final ImagePicker _picker = ImagePicker();
   String _selectedCity = '';
   String _selectedDistrict = '';
   final TextEditingController _detailAddressController =
@@ -29,12 +33,32 @@ class _AIRequestScreenState extends State<AIRequestScreen> {
   int _minExperience = 3;
 
   @override
+  void initState() {
+    super.initState();
+    _checkPermissions();
+  }
+
+  @override
   void dispose() {
     _descriptionController.dispose();
     _locationController.dispose();
     _urgencyController.dispose();
     _detailAddressController.dispose();
     super.dispose();
+  }
+
+  /// 권한 상태 확인
+  Future<void> _checkPermissions() async {
+    try {
+      final permissionStatus = await PermissionService.checkPermissionStatus();
+
+      print('=== 권한 상태 확인 ===');
+      print('카메라 권한 상태: ${permissionStatus["카메라"]}');
+      print('갤러리 권한 상태: ${permissionStatus["사진"]}');
+      print('==================');
+    } catch (e) {
+      print('권한 확인 오류: $e');
+    }
   }
 
   @override
@@ -218,7 +242,7 @@ class _AIRequestScreenState extends State<AIRequestScreen> {
             color: Colors.grey[200],
             borderRadius: BorderRadius.circular(8),
             image: DecorationImage(
-              image: NetworkImage(_selectedImages[index]),
+              image: FileImage(_selectedImages[index]),
               fit: BoxFit.cover,
             ),
           ),
@@ -245,10 +269,269 @@ class _AIRequestScreenState extends State<AIRequestScreen> {
 
   /// 이미지 추가 함수
   void _addImage() {
-    // TODO: 이미지 선택 로직 구현
-    setState(() {
-      _selectedImages.add('https://via.placeholder.com/150');
-    });
+    if (_selectedImages.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('최대 5장까지만 추가할 수 있습니다'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    _showImageSourceDialog();
+  }
+
+  /// 이미지 소스 선택 다이얼로그
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 핸들바
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // 헤더
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                '사진 추가',
+                style: AppTextStyles.cardTitle.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+
+            // 옵션들
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  _buildImageSourceOption(
+                    icon: Icons.camera_alt,
+                    title: '카메라로 촬영',
+                    subtitle: '새로운 사진을 촬영합니다',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickImageFromCamera();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildImageSourceOption(
+                    icon: Icons.photo_library,
+                    title: '갤러리에서 선택',
+                    subtitle: '기존 사진을 선택합니다',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickImageFromGallery();
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 이미지 소스 옵션 위젯
+  Widget _buildImageSourceOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 24, color: AppColors.primary),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.cardDescription.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: AppTextStyles.cardDescription.copyWith(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 카메라에서 이미지 선택
+  Future<void> _pickImageFromCamera() async {
+    try {
+      print('=== 카메라 권한 요청 시작 ===');
+
+      // PermissionService를 통해 카메라 권한 요청
+      final hasCameraPermission =
+          await PermissionService.requestCameraPermission();
+
+      if (!hasCameraPermission) {
+        print('카메라 권한이 거부됨');
+        _showPermissionDeniedDialog('카메라');
+        return;
+      }
+
+      print('카메라 권한 허용됨, 이미지 선택 시작');
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        print('이미지 선택됨: ${image.path}');
+        setState(() {
+          _selectedImages.add(File(image.path));
+        });
+      } else {
+        print('이미지 선택 취소됨');
+      }
+    } catch (e) {
+      print('카메라 오류: $e');
+      _showErrorDialog('카메라에서 사진을 가져오는 중 오류가 발생했습니다.');
+    }
+  }
+
+  /// 갤러리에서 이미지 선택
+  Future<void> _pickImageFromGallery() async {
+    try {
+      print('=== 갤러리 권한 요청 시작 ===');
+
+      // PermissionService를 통해 갤러리 권한 요청
+      final hasPhotosPermission =
+          await PermissionService.requestPhotosPermission();
+
+      if (!hasPhotosPermission) {
+        print('갤러리 권한이 거부됨');
+        _showPermissionDeniedDialog('갤러리');
+        return;
+      }
+
+      print('갤러리 권한 허용됨, 이미지 선택 시작');
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        print('이미지 선택됨: ${image.path}');
+        setState(() {
+          _selectedImages.add(File(image.path));
+        });
+      } else {
+        print('이미지 선택 취소됨');
+      }
+    } catch (e) {
+      print('갤러리 오류: $e');
+      _showErrorDialog('갤러리에서 사진을 가져오는 중 오류가 발생했습니다.');
+    }
+  }
+
+  /// 권한 거부 다이얼로그
+  void _showPermissionDeniedDialog(String permission) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$permission 권한이 필요합니다'),
+        content: Text(
+          '$permission에 접근하려면 설정에서 권한을 허용해주세요.\n\n사진을 추가하여 더 정확한 AI 견적을 받을 수 있습니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: const Text('설정으로 이동'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 오류 다이얼로그
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('오류'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// 이미지 제거 함수

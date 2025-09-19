@@ -4,6 +4,8 @@ import '../../constants/app_sizes.dart';
 import '../../constants/app_text_styles.dart';
 import '../../models/signup_data.dart';
 import '../../models/user_type.dart';
+import '../../services/api_service.dart';
+import 'repair_fields_selector.dart';
 
 /// 회원가입 폼 위젯
 class SignupForm extends StatefulWidget {
@@ -32,6 +34,9 @@ class _SignupFormState extends State<SignupForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _fullNameController = TextEditingController();
+  final _phoneController = TextEditingController();
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -41,6 +46,10 @@ class _SignupFormState extends State<SignupForm> {
   bool _isPasswordValid = false;
   bool _isConfirmPasswordValid = false;
   bool _isPasswordFocused = false;
+  bool _isUsernameValid = false;
+  bool _isFullNameValid = false;
+  bool _isPhoneValid = false;
+  List<int> _selectedSpecialtyIds = [];
 
   // 지역 목록
   final List<String> _regions = [
@@ -73,23 +82,80 @@ class _SignupFormState extends State<SignupForm> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _usernameController.dispose();
+    _fullNameController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
   /// 폼 제출 처리
   void _handleSubmit() {
-    if (_formKey.currentState!.validate() &&
-        _isEmailChecked &&
-        _selectedRegion != null) {
-      final signupData = SignupData(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        confirmPassword: _confirmPasswordController.text,
-        region: _selectedRegion!,
-        userType: widget.userType,
+    print('=== 회원가입 버튼 클릭 ===');
+    print('사용자 타입: ${widget.userType}');
+    print('이메일 중복 체크: $_isEmailChecked');
+    print('선택된 지역: $_selectedRegion');
+    print('선택된 전문분야: $_selectedSpecialtyIds');
+
+    // 수리기사인 경우 수리 분야 선택 확인
+    if (widget.userType == UserType.technician &&
+        _selectedSpecialtyIds.isEmpty) {
+      print('❌ 수리기사인데 전문분야가 선택되지 않음');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('수리 가능한 분야를 최소 1개 이상 선택해주세요'),
+          backgroundColor: Colors.red,
+        ),
       );
-      widget.onSubmit(signupData);
+      return;
     }
+
+    // 폼 유효성 검사
+    final isFormValid = _formKey.currentState!.validate();
+    print('폼 유효성 검사: $isFormValid');
+
+    if (!isFormValid) {
+      print('❌ 폼 유효성 검사 실패');
+      return;
+    }
+
+    if (!_isEmailChecked) {
+      print('❌ 이메일 중복 체크가 완료되지 않음');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('이메일 중복 체크를 완료해주세요'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedRegion == null) {
+      print('❌ 지역이 선택되지 않음');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('지역을 선택해주세요'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    print('✅ 모든 조건 통과, API 요청 시작');
+    final signupData = SignupData(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      confirmPassword: _confirmPasswordController.text,
+      username: _usernameController.text.trim(),
+      fullName: _fullNameController.text.trim(),
+      phone: _phoneController.text.trim().isEmpty
+          ? null
+          : _phoneController.text.trim(),
+      region: _selectedRegion!,
+      userType: widget.userType,
+      grade: widget.userType == UserType.customer ? 'consumer' : 'technician',
+      specialtyIds: _selectedSpecialtyIds,
+    );
+    widget.onSubmit(signupData);
   }
 
   /// 비밀번호 표시 토글
@@ -140,6 +206,140 @@ class _SignupFormState extends State<SignupForm> {
     });
   }
 
+  /// 사용자명 유효성 검사
+  bool _validateUsername(String username) {
+    return RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(username) &&
+        username.length >= 3;
+  }
+
+  /// 실명 유효성 검사
+  bool _validateFullName(String fullName) {
+    return RegExp(r'^[가-힣a-zA-Z\s]+$').hasMatch(fullName) &&
+        fullName.length >= 2;
+  }
+
+  /// 전화번호 유효성 검사
+  bool _validatePhone(String phone) {
+    if (phone.isEmpty) return true; // 선택사항이므로 빈 값도 유효
+    return RegExp(r'^010-\d{4}-\d{4}$').hasMatch(phone);
+  }
+
+  /// 사용자명 입력 변경 시 호출
+  void _onUsernameChanged(String username) {
+    setState(() {
+      _isUsernameValid = _validateUsername(username);
+    });
+  }
+
+  /// 실명 입력 변경 시 호출
+  void _onFullNameChanged(String fullName) {
+    setState(() {
+      _isFullNameValid = _validateFullName(fullName);
+    });
+  }
+
+  /// 전화번호 입력 변경 시 호출
+  void _onPhoneChanged(String phone) {
+    setState(() {
+      _isPhoneValid = _validatePhone(phone);
+    });
+  }
+
+  /// 이메일 사용 불가 다이얼로그 표시
+  void _showEmailUnavailableDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+        ),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 아이콘
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.email_outlined,
+                size: 32,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
+
+            // 제목
+            Text(
+              '이메일 사용 불가',
+              style: AppTextStyles.cardTitle.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.sm),
+
+            // 메시지
+            Text(
+              message,
+              style: AppTextStyles.cardDescription.copyWith(
+                fontSize: 16,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.lg),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // 이메일 필드에 포커스
+                FocusScope.of(context).requestFocus(FocusNode());
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  _emailController.clear();
+                  setState(() {
+                    _isEmailChecked = false;
+                  });
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.background,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    AppSizes.cardBorderRadius,
+                  ),
+                ),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: Text(
+                '다시 입력하기',
+                style: AppTextStyles.cardTitle.copyWith(
+                  color: AppColors.background,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 이메일 중복체크
   Future<void> _checkEmailDuplicate() async {
     if (_emailController.text.isEmpty) {
@@ -163,28 +363,48 @@ class _SignupFormState extends State<SignupForm> {
     });
 
     try {
-      // TODO: 실제 이메일 중복체크 API 호출
-      await Future.delayed(const Duration(seconds: 1)); // 임시 딜레이
+      // 실제 이메일 중복체크 API 호출
+      final response = await ApiService.checkEmailAvailability(
+        _emailController.text.trim(),
+      );
 
       if (mounted) {
-        setState(() {
-          _isEmailChecked = true;
-        });
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('사용 가능한 이메일입니다')));
+        if (response.available) {
+          setState(() {
+            _isEmailChecked = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          setState(() {
+            _isEmailChecked = false;
+          });
+          // 이메일이 사용 중일 때 중앙에 알림 다이얼로그 표시
+          _showEmailUnavailableDialog(response.message);
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('이메일 중복체크 중 오류가 발생했습니다: $e')));
+        setState(() {
+          _isEmailChecked = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('이메일 중복체크 중 오류가 발생했습니다: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
-      setState(() {
-        _isEmailChecking = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isEmailChecking = false;
+        });
+      }
     }
   }
 
@@ -201,6 +421,21 @@ class _SignupFormState extends State<SignupForm> {
 
           const SizedBox(height: AppSizes.lg),
 
+          // 사용자명 입력
+          _buildUsernameField(),
+
+          const SizedBox(height: AppSizes.lg),
+
+          // 실명 입력
+          _buildFullNameField(),
+
+          const SizedBox(height: AppSizes.lg),
+
+          // 전화번호 입력
+          _buildPhoneField(),
+
+          const SizedBox(height: AppSizes.lg),
+
           // 비밀번호 입력
           _buildPasswordField(),
 
@@ -213,6 +448,19 @@ class _SignupFormState extends State<SignupForm> {
 
           // 지역 선택
           _buildRegionField(),
+
+          // 수리기사인 경우 수리 분야 선택
+          if (widget.userType == UserType.technician) ...[
+            const SizedBox(height: AppSizes.lg),
+            RepairFieldsSelector(
+              selectedSpecialtyIds: _selectedSpecialtyIds,
+              onSpecialtyIdsChanged: (specialtyIds) {
+                setState(() {
+                  _selectedSpecialtyIds = specialtyIds;
+                });
+              },
+            ),
+          ],
 
           const SizedBox(height: AppSizes.xxl),
 
@@ -546,6 +794,223 @@ class _SignupFormState extends State<SignupForm> {
     );
   }
 
+  /// 사용자명 입력 필드
+  Widget _buildUsernameField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '사용자명',
+          style: AppTextStyles.cardTitle.copyWith(
+            fontSize: 14,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        TextFormField(
+          controller: _usernameController,
+          onChanged: _onUsernameChanged,
+          style: AppTextStyles.cardDescription.copyWith(
+            fontSize: 16,
+            color: AppColors.textPrimary,
+          ),
+          decoration: InputDecoration(
+            hintText: '영문, 숫자, 언더스코어만 사용 (3자 이상)',
+            hintStyle: AppTextStyles.cardDescription.copyWith(
+              fontSize: 16,
+              color: AppColors.textSecondary,
+            ),
+            suffixIcon: _isUsernameValid
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: BorderSide(
+                color: AppColors.textSecondary.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: BorderSide(
+                color: AppColors.textSecondary.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.md,
+              vertical: AppSizes.md,
+            ),
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return '사용자명을 입력해주세요';
+            }
+            if (!_validateUsername(value)) {
+              return '영문, 숫자, 언더스코어만 사용하고 3자 이상 입력해주세요';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  /// 실명 입력 필드
+  Widget _buildFullNameField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '실명',
+          style: AppTextStyles.cardTitle.copyWith(
+            fontSize: 14,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        TextFormField(
+          controller: _fullNameController,
+          onChanged: _onFullNameChanged,
+          style: AppTextStyles.cardDescription.copyWith(
+            fontSize: 16,
+            color: AppColors.textPrimary,
+          ),
+          decoration: InputDecoration(
+            hintText: '한글 또는 영문으로 입력 (2자 이상)',
+            hintStyle: AppTextStyles.cardDescription.copyWith(
+              fontSize: 16,
+              color: AppColors.textSecondary,
+            ),
+            suffixIcon: _isFullNameValid
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: BorderSide(
+                color: AppColors.textSecondary.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: BorderSide(
+                color: AppColors.textSecondary.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.md,
+              vertical: AppSizes.md,
+            ),
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return '실명을 입력해주세요';
+            }
+            if (!_validateFullName(value)) {
+              return '한글 또는 영문으로 2자 이상 입력해주세요';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  /// 전화번호 입력 필드
+  Widget _buildPhoneField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '전화번호 (선택사항)',
+          style: AppTextStyles.cardTitle.copyWith(
+            fontSize: 14,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        TextFormField(
+          controller: _phoneController,
+          onChanged: _onPhoneChanged,
+          keyboardType: TextInputType.phone,
+          style: AppTextStyles.cardDescription.copyWith(
+            fontSize: 16,
+            color: AppColors.textPrimary,
+          ),
+          decoration: InputDecoration(
+            hintText: '010-1234-5678',
+            hintStyle: AppTextStyles.cardDescription.copyWith(
+              fontSize: 16,
+              color: AppColors.textSecondary,
+            ),
+            suffixIcon: _isPhoneValid && _phoneController.text.isNotEmpty
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: BorderSide(
+                color: AppColors.textSecondary.withValues(alpha: 0.3),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: BorderSide(
+                color: AppColors.textSecondary.withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.md,
+              vertical: AppSizes.md,
+            ),
+          ),
+          validator: (value) {
+            if (value != null && value.isNotEmpty && !_validatePhone(value)) {
+              return '010-1234-5678 형식으로 입력해주세요';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
   /// 이메일 입력 필드 (중복체크 버튼 포함)
   Widget _buildEmailField() {
     return Column(
@@ -567,6 +1032,16 @@ class _SignupFormState extends State<SignupForm> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 enabled: !_isEmailChecked,
+                onChanged: (value) {
+                  // 이메일이 변경되면 중복 체크 상태 초기화
+                  if (_isEmailChecked) {
+                    setState(() {
+                      _isEmailChecked = false;
+                    });
+                  }
+                  // 버튼 상태 업데이트를 위해 setState 호출
+                  setState(() {});
+                },
                 style: AppTextStyles.cardDescription.copyWith(
                   fontSize: 16,
                   color: AppColors.textPrimary,
@@ -639,12 +1114,33 @@ class _SignupFormState extends State<SignupForm> {
             SizedBox(
               height: 56,
               child: ElevatedButton(
-                onPressed: _isEmailChecked || _isEmailChecking
+                onPressed:
+                    _isEmailChecking ||
+                        _emailController.text.isEmpty ||
+                        !RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(_emailController.text)
                     ? null
                     : _checkEmailDuplicate,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.background,
+                  backgroundColor:
+                      _isEmailChecking ||
+                          _emailController.text.isEmpty ||
+                          !RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(_emailController.text)
+                      ? AppColors.textSecondary.withValues(alpha: 0.3)
+                      : _isEmailChecked
+                      ? Colors.green
+                      : AppColors.primary,
+                  foregroundColor:
+                      _isEmailChecking ||
+                          _emailController.text.isEmpty ||
+                          !RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          ).hasMatch(_emailController.text)
+                      ? AppColors.textSecondary.withValues(alpha: 0.6)
+                      : AppColors.background,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(
                       AppSizes.cardBorderRadius,
@@ -661,12 +1157,21 @@ class _SignupFormState extends State<SignupForm> {
                           strokeWidth: 2,
                         ),
                       )
-                    : Text(
-                        _isEmailChecked ? '완료' : '중복체크',
-                        style: AppTextStyles.cardDescription.copyWith(
-                          color: AppColors.background,
-                          fontSize: 14,
-                        ),
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_isEmailChecked) ...[
+                            const Icon(Icons.check, size: 16),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            _isEmailChecked ? '완료' : '중복체크',
+                            style: AppTextStyles.cardDescription.copyWith(
+                              color: AppColors.background,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
               ),
             ),
@@ -842,79 +1347,6 @@ class _SignupFormState extends State<SignupForm> {
           ],
         ),
       ),
-    );
-  }
-
-  /// 입력 필드 위젯 생성
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required String hintText,
-    TextInputType? keyboardType,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.cardTitle.copyWith(
-            fontSize: 14,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: AppSizes.sm),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          obscureText: obscureText,
-          maxLines: maxLines,
-          validator: validator,
-          style: AppTextStyles.cardDescription.copyWith(
-            fontSize: 16,
-            color: AppColors.textPrimary,
-          ),
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: AppTextStyles.cardDescription.copyWith(
-              fontSize: 16,
-              color: AppColors.textSecondary,
-            ),
-            suffixIcon: suffixIcon,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
-              borderSide: BorderSide(
-                color: AppColors.textSecondary.withValues(alpha: 0.3),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
-              borderSide: BorderSide(
-                color: AppColors.textSecondary.withValues(alpha: 0.3),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
-              borderSide: BorderSide(color: AppColors.primary, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
-              borderSide: BorderSide(color: Colors.red),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.cardBorderRadius),
-              borderSide: BorderSide(color: Colors.red, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSizes.md,
-              vertical: AppSizes.md,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

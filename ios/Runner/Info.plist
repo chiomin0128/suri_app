@@ -45,5 +45,14 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- 카메라 및 갤러리 접근 권한 -->
+	<key>NSCameraUsageDescription</key>
+	<string>수리할 부분을 촬영하기 위해 카메라에 접근합니다. 이 권한은 AI 견적 요청 시 문제 상황을 명확히 파악하기 위해 필요합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>수리할 부분의 사진을 선택하기 위해 갤러리에 접근합니다. 이 권한은 AI 견적 요청 시 문제 상황을 명확히 파악하기 위해 필요합니다.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>수리할 부분의 사진을 선택하기 위해 갤러리에 접근합니다. 이 권한은 AI 견적 요청 시 문제 상황을 명확히 파악하기 위해 필요합니다.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>비디오 촬영을 위해 마이크에 접근합니다. 이 권한은 수리 상황을 더 자세히 기록하기 위해 필요합니다.</string>
 </dict>
 </plist>
